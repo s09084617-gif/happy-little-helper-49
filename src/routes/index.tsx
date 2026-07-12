@@ -251,7 +251,7 @@ function SummaryMetricComponent({
     >
       <div className="flex items-center gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/5 text-muted-foreground">
-          <Icon className="h-4.5 w-4.5" strokeWidth={1.8} />
+          <Icon className="h-5 w-5" strokeWidth={1.8} />
         </div>
         <span className="text-sm font-medium text-white/80">{metric.label}</span>
       </div>
