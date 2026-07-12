@@ -1,4 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Search,
   PenTool,
@@ -12,7 +13,9 @@ import {
   FileText,
   Send,
   Zap,
+  Loader2,
 } from "lucide-react";
+import { fetchScoutData } from "@/lib/scout.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
@@ -23,10 +26,10 @@ interface AgentCard {
   title: string;
   icon: React.ElementType;
   status: string;
-  statusType: "waiting" | "idle";
+  statusType: "waiting" | "idle" | "active" | "loading" | "error";
 }
 
-const agents: AgentCard[] = [
+const baseAgents: AgentCard[] = [
   {
     id: "scout",
     title: "Scout Agent",
@@ -34,41 +37,11 @@ const agents: AgentCard[] = [
     status: "Waiting for Instagram data",
     statusType: "waiting",
   },
-  {
-    id: "script",
-    title: "Script Agent",
-    icon: PenTool,
-    status: "Idle",
-    statusType: "idle",
-  },
-  {
-    id: "calendar",
-    title: "Calendar Agent",
-    icon: CalendarDays,
-    status: "Idle",
-    statusType: "idle",
-  },
-  {
-    id: "analytics",
-    title: "Analytics Agent",
-    icon: BarChart3,
-    status: "Idle",
-    statusType: "idle",
-  },
-  {
-    id: "dm",
-    title: "DM Agent",
-    icon: MessageSquare,
-    status: "Idle",
-    statusType: "idle",
-  },
-  {
-    id: "carousel",
-    title: "Carousel Agent",
-    icon: Images,
-    status: "Idle",
-    statusType: "idle",
-  },
+  { id: "script", title: "Script Agent", icon: PenTool, status: "Idle", statusType: "idle" },
+  { id: "calendar", title: "Calendar Agent", icon: CalendarDays, status: "Idle", statusType: "idle" },
+  { id: "analytics", title: "Analytics Agent", icon: BarChart3, status: "Idle", statusType: "idle" },
+  { id: "dm", title: "DM Agent", icon: MessageSquare, status: "Idle", statusType: "idle" },
+  { id: "carousel", title: "Carousel Agent", icon: Images, status: "Idle", statusType: "idle" },
 ];
 
 interface SummaryMetric {
@@ -77,18 +50,46 @@ interface SummaryMetric {
   icon: React.ElementType;
 }
 
-const summaryMetrics: SummaryMetric[] = [
-  { label: "Posts Analysed", value: "0", icon: Activity },
-  { label: "Competitors Tracked", value: "0", icon: Target },
-  { label: "Ideas Generated", value: "0", icon: Lightbulb },
-  { label: "Scripts Created", value: "0", icon: FileText },
-  { label: "DMs Pending", value: "0", icon: Send },
-];
-
 function Index() {
+  const scout = useQuery({
+    queryKey: ["scout"],
+    queryFn: () => fetchScoutData(),
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  const agents: AgentCard[] = baseAgents.map((a) => {
+    if (a.id !== "scout") return a;
+    if (scout.isLoading) {
+      return { ...a, status: "Fetching Instagram data…", statusType: "loading" };
+    }
+    if (scout.isError) {
+      return { ...a, status: "Scout Agent Offline", statusType: "error" };
+    }
+    if (scout.data) {
+      const count = scout.data.profiles.length;
+      return {
+        ...a,
+        status: `Monitoring ${count} Instagram account${count === 1 ? "" : "s"}`,
+        statusType: "active",
+      };
+    }
+    return a;
+  });
+
+  const totalPosts = scout.data?.totalPosts ?? 0;
+  const competitorsTracked = scout.data ? 4 : 0;
+
+  const summaryMetrics: SummaryMetric[] = [
+    { label: "Posts Analysed", value: String(totalPosts), icon: Activity },
+    { label: "Competitors Tracked", value: String(competitorsTracked), icon: Target },
+    { label: "Ideas Generated", value: "0", icon: Lightbulb },
+    { label: "Scripts Created", value: "0", icon: FileText },
+    { label: "DMs Pending", value: "0", icon: Send },
+  ];
+
   return (
     <div className="min-h-screen bg-background text-foreground">
-      {/* Subtle top glow */}
       <div
         className="pointer-events-none fixed inset-x-0 top-0 h-[500px] opacity-30"
         style={{
@@ -98,7 +99,6 @@ function Index() {
       />
 
       <div className="relative mx-auto flex min-h-screen max-w-[1600px] flex-col px-6 py-8 lg:px-10 lg:py-10">
-        {/* Header */}
         <header className="animate-fade-in mb-10 lg:mb-14">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
             <div>
@@ -120,22 +120,15 @@ function Index() {
           </div>
         </header>
 
-        {/* Main content + sidebar */}
         <div className="flex flex-1 flex-col gap-8 xl:flex-row">
-          {/* Agent grid */}
           <main className="flex-1">
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {agents.map((agent, index) => (
-                <AgentCardComponent
-                  key={agent.id}
-                  agent={agent}
-                  index={index}
-                />
+                <AgentCardComponent key={agent.id} agent={agent} index={index} />
               ))}
             </div>
           </main>
 
-          {/* Sidebar */}
           <aside className="w-full shrink-0 animate-fade-in xl:w-80 xl:pl-2">
             <div className="glass-card rounded-2xl p-6 lg:p-7">
               <div className="mb-6 flex items-center justify-between">
@@ -143,7 +136,7 @@ function Index() {
                   Today&apos;s Summary
                 </h2>
                 <span className="rounded-full bg-crimson/10 px-2.5 py-1 text-xs font-medium text-crimson">
-                  Live
+                  {scout.isLoading ? "Loading" : scout.isError ? "Offline" : "Live"}
                 </span>
               </div>
 
@@ -162,8 +155,11 @@ function Index() {
                   Daily tip
                 </p>
                 <p className="mt-1 text-sm text-white/80">
-                  Connect your Instagram account to activate the Scout Agent and
-                  start analysing your content.
+                  {scout.isError
+                    ? "Scout Agent is offline. Check your Apify token and dataset ID."
+                    : scout.data
+                      ? `Tracking ${scout.data.profiles.length} profiles across ${totalPosts} recent posts.`
+                      : "Connecting to Apify to pull the latest Instagram data…"}
                 </p>
               </div>
             </div>
@@ -183,14 +179,29 @@ function AgentCardComponent({
 }) {
   const Icon = agent.icon;
 
+  const statusColor =
+    agent.statusType === "active"
+      ? "text-emerald-400"
+      : agent.statusType === "error"
+        ? "text-crimson"
+        : agent.statusType === "waiting" || agent.statusType === "loading"
+          ? "text-crimson"
+          : "text-muted-foreground";
+
+  const barClass =
+    agent.statusType === "active"
+      ? "w-full bg-emerald-400"
+      : agent.statusType === "error"
+        ? "w-1/2 bg-crimson/70"
+        : agent.statusType === "waiting" || agent.statusType === "loading"
+          ? "w-3/4 bg-crimson"
+          : "w-1/4 bg-white/30";
+
   return (
     <div
       className="glass-card group relative overflow-hidden rounded-2xl p-6 transition-all duration-300 hover:border-crimson/30 hover:bg-white/[0.05]"
-      style={{
-        animationDelay: `${index * 80}ms`,
-      }}
+      style={{ animationDelay: `${index * 80}ms` }}
     >
-      {/* Hover glow */}
       <div className="pointer-events-none absolute -right-20 -top-20 h-40 w-40 rounded-full bg-crimson/10 blur-3xl opacity-0 transition-opacity duration-500 group-hover:opacity-100" />
 
       <div className="relative flex items-start justify-between">
@@ -201,18 +212,18 @@ function AgentCardComponent({
           <div>
             <h3 className="text-lg font-semibold text-white">{agent.title}</h3>
             <div className="mt-1.5 flex items-center gap-2">
-              {agent.statusType === "waiting" ? (
+              {agent.statusType === "loading" ? (
+                <Loader2 className="h-3 w-3 animate-spin text-crimson" />
+              ) : agent.statusType === "active" ? (
+                <span className="inline-block h-2 w-2 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
+              ) : agent.statusType === "error" ? (
+                <span className="inline-block h-2 w-2 rounded-full bg-crimson" />
+              ) : agent.statusType === "waiting" ? (
                 <span className="status-dot animate-pulse" />
               ) : (
                 <span className="status-dot-idle" />
               )}
-              <span
-                className={`text-sm font-medium ${
-                  agent.statusType === "waiting"
-                    ? "text-crimson"
-                    : "text-muted-foreground"
-                }`}
-              >
+              <span className={`text-sm font-medium ${statusColor}`}>
                 {agent.status}
               </span>
             </div>
@@ -222,13 +233,7 @@ function AgentCardComponent({
 
       <div className="relative mt-6 flex items-center justify-between">
         <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/10">
-          <div
-            className={`h-full rounded-full transition-all duration-700 ${
-              agent.statusType === "waiting"
-                ? "w-3/4 bg-crimson"
-                : "w-1/4 bg-white/30"
-            }`}
-          />
+          <div className={`h-full rounded-full transition-all duration-700 ${barClass}`} />
         </div>
       </div>
     </div>
