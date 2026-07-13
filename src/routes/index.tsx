@@ -353,8 +353,300 @@ function AgentCardComponent({
       </div>
 
       {scoutExtra ? <ScoutLastSync extra={scoutExtra} /> : null}
+      {analyticsExtra ? <AnalyticsRunControl extra={analyticsExtra} /> : null}
     </div>
   );
+}
+
+interface AnalyticsExtra {
+  canRun: boolean;
+  isPending: boolean;
+  hasResult: boolean;
+  errorMessage: string | null;
+  onRun: () => void;
+}
+
+function AnalyticsRunControl({ extra }: { extra: AnalyticsExtra }) {
+  const { canRun, isPending, hasResult, errorMessage, onRun } = extra;
+  return (
+    <div className="relative mt-5 border-t border-white/5 pt-4">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <Sparkles className="h-3.5 w-3.5" />
+          <span>AI Analyst</span>
+        </div>
+        <button
+          type="button"
+          onClick={onRun}
+          disabled={!canRun || isPending}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-crimson/20 bg-crimson/10 px-2.5 py-1 text-xs font-medium text-crimson transition-colors hover:bg-crimson/20 disabled:cursor-not-allowed disabled:opacity-40"
+        >
+          {isPending ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Sparkles className="h-3.5 w-3.5" />
+          )}
+          <span>
+            {isPending ? "Analysing" : hasResult ? "Re-run analysis" : "Run analysis"}
+          </span>
+        </button>
+      </div>
+      {!canRun && !isPending ? (
+        <p className="mt-2 text-xs text-muted-foreground">
+          Waiting for Scout Agent data.
+        </p>
+      ) : null}
+      {errorMessage && !isPending ? (
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-crimson">
+          <AlertCircle className="h-3.5 w-3.5" /> {errorMessage}
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
+function AnalyticsPanel({
+  data,
+  isPending,
+  errorMessage,
+}: {
+  data: AnalyticsResult | null;
+  isPending: boolean;
+  errorMessage: string | null;
+}) {
+  return (
+    <section className="animate-fade-in space-y-5">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-crimson/10 text-crimson ring-1 ring-crimson/20">
+            <Sparkles className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-white">Analytics Intelligence</h2>
+            <p className="text-sm text-muted-foreground">
+              {isPending
+                ? "AI is analysing every scraped post…"
+                : data
+                  ? `${data.postsAnalysed} posts analysed · updated ${new Date(data.generatedAt).toLocaleTimeString()}`
+                  : errorMessage ?? "No analysis yet"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {isPending ? (
+        <div className="glass-card flex items-center gap-3 rounded-2xl p-8 text-sm text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin text-crimson" />
+          Running competitor analysis. This usually takes 10–20 seconds…
+        </div>
+      ) : errorMessage && !data ? (
+        <div className="glass-card flex items-center gap-3 rounded-2xl border-crimson/30 p-6 text-sm text-crimson">
+          <AlertCircle className="h-5 w-5" /> {errorMessage}
+        </div>
+      ) : data ? (
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
+          <PanelCard
+            icon={Quote}
+            title="Top Performing Hooks"
+            subtitle="First line of each caption, ranked by engagement"
+          >
+            {data.hooks.length === 0 ? (
+              <EmptyRow>No captions available.</EmptyRow>
+            ) : (
+              <ol className="space-y-2.5">
+                {data.hooks.map((h, i) => (
+                  <li
+                    key={`${h.username}-${i}`}
+                    className="rounded-lg border border-white/5 bg-white/[0.03] p-3"
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <p className="text-sm leading-snug text-white/90">
+                        <span className="mr-2 text-crimson">#{i + 1}</span>
+                        {h.hook}
+                      </p>
+                      <span className="shrink-0 text-xs text-muted-foreground">
+                        @{h.username}
+                      </span>
+                    </div>
+                    <div className="mt-1.5 flex gap-3 text-[11px] tabular-nums text-muted-foreground">
+                      <span>{formatNum(h.likes)} likes</span>
+                      <span>{formatNum(h.comments)} comments</span>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            )}
+          </PanelCard>
+
+          <PanelCard
+            icon={Layers}
+            title="Best Content Pillars"
+            subtitle="AI classification across all scraped posts"
+          >
+            <div className="space-y-2">
+              {data.pillars.map((p) => {
+                const max = Math.max(1, ...data.pillars.map((x) => x.count));
+                const pct = (p.count / max) * 100;
+                return (
+                  <div
+                    key={p.pillar}
+                    className="rounded-lg border border-white/5 bg-white/[0.03] p-3"
+                  >
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="font-medium text-white/90">{p.pillar}</span>
+                      <span className="tabular-nums text-muted-foreground">
+                        {p.count} post{p.count === 1 ? "" : "s"}
+                      </span>
+                    </div>
+                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-crimson transition-all duration-700"
+                        style={{ width: `${pct}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </PanelCard>
+
+          <PanelCard
+            icon={Trophy}
+            title="Competitor Leaderboard"
+            subtitle="Sorted by engagement rate"
+          >
+            {data.leaderboard.length === 0 ? (
+              <EmptyRow>No competitor data.</EmptyRow>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                      <th className="pb-2 font-medium">Username</th>
+                      <th className="pb-2 text-right font-medium">Followers</th>
+                      <th className="pb-2 text-right font-medium">Avg Likes</th>
+                      <th className="pb-2 text-right font-medium">Avg Comm.</th>
+                      <th className="pb-2 text-right font-medium">ER%</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/5">
+                    {data.leaderboard.map((r) => (
+                      <tr key={r.username} className="text-white/90">
+                        <td className="py-2 font-medium">@{r.username}</td>
+                        <td className="py-2 text-right tabular-nums">
+                          {formatNum(r.followers)}
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {formatNum(Math.round(r.avgLikes))}
+                        </td>
+                        <td className="py-2 text-right tabular-nums">
+                          {formatNum(Math.round(r.avgComments))}
+                        </td>
+                        <td className="py-2 text-right font-semibold tabular-nums text-crimson">
+                          {r.engagementRate.toFixed(2)}%
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </PanelCard>
+
+          <PanelCard
+            icon={TrendingUp}
+            title="Opportunity Finder"
+            subtitle="Trends and gaps across competitors"
+          >
+            {data.opportunities.length === 0 ? (
+              <EmptyRow>No opportunities found.</EmptyRow>
+            ) : (
+              <ul className="space-y-2">
+                {data.opportunities.map((o, i) => (
+                  <li
+                    key={i}
+                    className="flex gap-3 rounded-lg border border-white/5 bg-white/[0.03] p-3 text-sm text-white/90"
+                  >
+                    <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-crimson" />
+                    <span>{o}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </PanelCard>
+
+          <div className="xl:col-span-2">
+            <PanelCard
+              icon={Lightbulb}
+              title="AI Recommendations"
+              subtitle="10 content ideas tailored to Sahil's audience"
+            >
+              {data.recommendations.length === 0 ? (
+                <EmptyRow>No recommendations generated.</EmptyRow>
+              ) : (
+                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                  {data.recommendations.map((r, i) => (
+                    <div
+                      key={i}
+                      className="flex gap-3 rounded-lg border border-white/5 bg-white/[0.03] p-3 text-sm text-white/90"
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-crimson/15 text-xs font-semibold text-crimson">
+                        {i + 1}
+                      </span>
+                      <span>{r}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </PanelCard>
+          </div>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function PanelCard({
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="glass-card rounded-2xl p-5 lg:p-6">
+      <div className="mb-4 flex items-start gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-crimson/10 text-crimson ring-1 ring-crimson/20">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-white">{title}</h3>
+          {subtitle ? (
+            <p className="text-xs text-muted-foreground">{subtitle}</p>
+          ) : null}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function EmptyRow({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="rounded-lg border border-dashed border-white/10 p-4 text-center text-xs text-muted-foreground">
+      {children}
+    </div>
+  );
+}
+
+function formatNum(n: number): string {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(1) + "M";
+  if (n >= 1_000) return (n / 1_000).toFixed(1) + "K";
+  return String(n);
 }
 
 function ScoutLastSync({ extra }: { extra: ScoutExtra }) {
