@@ -120,7 +120,7 @@ function Index() {
   const summaryMetrics: SummaryMetric[] = [
     { label: "Posts Analysed", value: String(totalPosts), icon: Activity },
     { label: "Competitors Tracked", value: String(competitorsTracked), icon: Target },
-    { label: "Ideas Generated", value: "0", icon: Lightbulb },
+    { label: "Ideas Generated", value: String(analytics.data?.recommendations.length ?? 0), icon: Lightbulb },
     { label: "Scripts Created", value: "0", icon: FileText },
     { label: "DMs Pending", value: "0", icon: Send },
   ];
