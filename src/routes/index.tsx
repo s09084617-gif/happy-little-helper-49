@@ -197,12 +197,35 @@ function Index() {
   );
 }
 
+interface ScoutExtra {
+  lastSyncedAt: number | null;
+  profileCount: number;
+  postCount: number;
+  isFetching: boolean;
+  isError: boolean;
+  isSuccess: boolean;
+  errorMessage: string | null;
+  onRefresh: () => void;
+}
+
+function formatSyncTime(ts: number | null): string {
+  if (!ts) return "Never";
+  const d = new Date(ts);
+  return d.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
 function AgentCardComponent({
   agent,
   index,
+  scoutExtra,
 }: {
   agent: AgentCard;
   index: number;
+  scoutExtra?: ScoutExtra;
 }) {
   const Icon = agent.icon;
 
@@ -263,6 +286,89 @@ function AgentCardComponent({
           <div className={`h-full rounded-full transition-all duration-700 ${barClass}`} />
         </div>
       </div>
+
+      {scoutExtra ? <ScoutLastSync extra={scoutExtra} /> : null}
+    </div>
+  );
+}
+
+function ScoutLastSync({ extra }: { extra: ScoutExtra }) {
+  const {
+    lastSyncedAt,
+    profileCount,
+    postCount,
+    isFetching,
+    isError,
+    isSuccess,
+    errorMessage,
+    onRefresh,
+  } = extra;
+
+  return (
+    <div className="relative mt-5 border-t border-white/5 pt-4">
+      <div className="mb-3 flex items-center justify-between">
+        <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+          <Clock className="h-3.5 w-3.5" />
+          <span>Last Sync</span>
+        </div>
+        <button
+          type="button"
+          onClick={onRefresh}
+          disabled={isFetching}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-crimson/20 bg-crimson/10 px-2.5 py-1 text-xs font-medium text-crimson transition-colors hover:bg-crimson/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          <RefreshCw
+            className={`h-3.5 w-3.5 ${isFetching ? "animate-spin" : ""}`}
+          />
+          <span>{isFetching ? "Syncing" : "Refresh"}</span>
+        </button>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        <div className="rounded-lg border border-white/5 bg-white/[0.03] p-2.5">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Time
+          </p>
+          <p className="mt-0.5 text-sm font-semibold tabular-nums text-white">
+            {formatSyncTime(lastSyncedAt)}
+          </p>
+        </div>
+        <div className="rounded-lg border border-white/5 bg-white/[0.03] p-2.5">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Profiles
+          </p>
+          <p className="mt-0.5 text-sm font-semibold tabular-nums text-white">
+            {profileCount}
+          </p>
+        </div>
+        <div className="rounded-lg border border-white/5 bg-white/[0.03] p-2.5">
+          <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+            Posts
+          </p>
+          <p className="mt-0.5 text-sm font-semibold tabular-nums text-white">
+            {postCount}
+          </p>
+        </div>
+      </div>
+
+      {!isFetching && (isSuccess || isError) ? (
+        <div
+          className={`mt-3 flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-xs font-medium ${
+            isError
+              ? "bg-crimson/10 text-crimson"
+              : "bg-emerald-400/10 text-emerald-400"
+          }`}
+        >
+          {isError ? (
+            <AlertCircle className="h-3.5 w-3.5" />
+          ) : (
+            <CheckCircle2 className="h-3.5 w-3.5" />
+          )}
+          <span className="truncate">
+            {isError ? errorMessage ?? "Sync failed" : "Sync Successful"}
+          </span>
+        </div>
+      ) : null}
     </div>
   );
 }
