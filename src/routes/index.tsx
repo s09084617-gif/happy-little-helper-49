@@ -61,12 +61,6 @@ interface SummaryMetric {
 }
 
 function Index() {
-  const scout = useQuery({
-    queryKey: ["scout"],
-    queryFn: () => fetchScoutData(),
-    retry: 1,
-    refetchOnWindowFocus: false,
-  });
 
   const scout = useQuery({
     queryKey: ["scout"],
