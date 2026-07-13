@@ -68,17 +68,57 @@ function Index() {
     refetchOnWindowFocus: false,
   });
 
+  const scout = useQuery({
+    queryKey: ["scout"],
+    queryFn: () => fetchScoutData(),
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  const analytics = useMutation({
+    mutationFn: () => analyzeScoutData(),
+  });
+
+  const scoutReady = !!scout.data && scout.data.profiles.length > 0;
+
+  const analyticsStatus: {
+    status: string;
+    statusType: AgentCard["statusType"];
+  } = analytics.isPending
+    ? { status: "Analysing competitor posts…", statusType: "loading" }
+    : analytics.isError
+      ? { status: "Analysis failed", statusType: "error" }
+      : analytics.data
+        ? {
+            status: `Analysed ${analytics.data.postsAnalysed} posts`,
+            statusType: "active",
+          }
+        : scoutReady
+          ? { status: "Ready to analyse", statusType: "waiting" }
+          : { status: "Idle", statusType: "idle" };
+
   const agents: AgentCard[] = baseAgents.map((a) => {
-    if (a.id !== "scout") return a;
-    if (scout.isLoading) {
-      return { ...a, status: "Fetching Instagram data…", statusType: "loading" };
+    if (a.id === "scout") {
+      if (scout.isLoading) {
+        return { ...a, status: "Fetching Instagram data…", statusType: "loading" };
+      }
+      if (scout.isError) {
+        return { ...a, status: "Scout Agent Offline", statusType: "error" };
+      }
+      if (scout.data) {
+        const count = scout.data.profiles.length;
+        return {
+          ...a,
+          status: `Monitoring ${count} Instagram account${count === 1 ? "" : "s"}`,
+          statusType: "active",
+        };
+      }
     }
-    if (scout.isError) {
-      return { ...a, status: "Scout Agent Offline", statusType: "error" };
+    if (a.id === "analytics") {
+      return { ...a, ...analyticsStatus };
     }
-    if (scout.data) {
-      const count = scout.data.profiles.length;
-      return {
+    return a;
+  });
         ...a,
         status: `Monitoring ${count} Instagram account${count === 1 ? "" : "s"}`,
         statusType: "active",
