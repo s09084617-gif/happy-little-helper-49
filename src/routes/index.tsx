@@ -158,7 +158,7 @@ function Index() {
         </header>
 
         <div className="flex flex-1 flex-col gap-8 xl:flex-row">
-          <main className="flex-1">
+          <main className="flex-1 space-y-8">
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {agents.map((agent, index) => (
                 <AgentCardComponent
@@ -184,9 +184,39 @@ function Index() {
                         }
                       : undefined
                   }
+                  analyticsExtra={
+                    agent.id === "analytics"
+                      ? {
+                          canRun: scoutReady,
+                          isPending: analytics.isPending,
+                          hasResult: !!analytics.data,
+                          errorMessage:
+                            analytics.error instanceof Error
+                              ? analytics.error.message
+                              : analytics.isError
+                                ? "Analysis failed"
+                                : null,
+                          onRun: () => analytics.mutate(),
+                        }
+                      : undefined
+                  }
                 />
               ))}
             </div>
+
+            {(analytics.isPending || analytics.data || analytics.isError) && (
+              <AnalyticsPanel
+                data={analytics.data ?? null}
+                isPending={analytics.isPending}
+                errorMessage={
+                  analytics.error instanceof Error
+                    ? analytics.error.message
+                    : analytics.isError
+                      ? "Analysis failed"
+                      : null
+                }
+              />
+            )}
           </main>
 
           <aside className="w-full shrink-0 animate-fade-in xl:w-80 xl:pl-2">
