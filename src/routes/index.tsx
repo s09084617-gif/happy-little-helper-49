@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import {
   Search,
   PenTool,
@@ -18,8 +18,14 @@ import {
   CheckCircle2,
   AlertCircle,
   Clock,
+  Sparkles,
+  Trophy,
+  Layers,
+  Quote,
+  TrendingUp,
 } from "lucide-react";
 import { fetchScoutData } from "@/lib/scout.functions";
+import { analyzeScoutData, type AnalyticsResult } from "@/lib/analytics.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
