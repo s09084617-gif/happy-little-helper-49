@@ -128,7 +128,30 @@ function Index() {
           <main className="flex-1">
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3">
               {agents.map((agent, index) => (
-                <AgentCardComponent key={agent.id} agent={agent} index={index} />
+                <AgentCardComponent
+                  key={agent.id}
+                  agent={agent}
+                  index={index}
+                  scoutExtra={
+                    agent.id === "scout"
+                      ? {
+                          lastSyncedAt: scout.data ? scout.dataUpdatedAt : null,
+                          profileCount: scout.data?.profiles.length ?? 0,
+                          postCount: totalPosts,
+                          isFetching: scout.isFetching,
+                          isError: scout.isError,
+                          isSuccess: scout.isSuccess,
+                          errorMessage:
+                            scout.error instanceof Error
+                              ? scout.error.message
+                              : scout.isError
+                                ? "Failed to sync"
+                                : null,
+                          onRefresh: () => scout.refetch(),
+                        }
+                      : undefined
+                  }
+                />
               ))}
             </div>
           </main>
