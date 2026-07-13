@@ -119,13 +119,6 @@ function Index() {
     }
     return a;
   });
-        ...a,
-        status: `Monitoring ${count} Instagram account${count === 1 ? "" : "s"}`,
-        statusType: "active",
-      };
-    }
-    return a;
-  });
 
   const totalPosts = scout.data?.totalPosts ?? 0;
   const competitorsTracked = scout.data ? 4 : 0;
