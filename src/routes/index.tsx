@@ -285,10 +285,12 @@ function AgentCardComponent({
   agent,
   index,
   scoutExtra,
+  analyticsExtra,
 }: {
   agent: AgentCard;
   index: number;
   scoutExtra?: ScoutExtra;
+  analyticsExtra?: AnalyticsExtra;
 }) {
   const Icon = agent.icon;
 
