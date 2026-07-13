@@ -14,6 +14,10 @@ import {
   Send,
   Zap,
   Loader2,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
 } from "lucide-react";
 import { fetchScoutData } from "@/lib/scout.functions";
 
