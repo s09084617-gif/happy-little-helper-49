@@ -806,34 +806,6 @@ function buildMarkdownReport(data: AnalyticsResult): string {
 }
 
 
-function PanelCard({
-  icon: Icon,
-  title,
-  subtitle,
-  children,
-}: {
-  icon: React.ElementType;
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="glass-card rounded-2xl p-5 lg:p-6">
-      <div className="mb-4 flex items-start gap-3">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-crimson/10 text-crimson ring-1 ring-crimson/20">
-          <Icon className="h-4 w-4" />
-        </div>
-        <div>
-          <h3 className="text-base font-semibold text-white">{title}</h3>
-          {subtitle ? (
-            <p className="text-xs text-muted-foreground">{subtitle}</p>
-          ) : null}
-        </div>
-      </div>
-      {children}
-    </div>
-  );
-}
 
 function EmptyRow({ children }: { children: React.ReactNode }) {
   return (
