@@ -230,7 +230,7 @@ export const analyzeScoutData = createServerFn({ method: "POST" })
         .eq("input_hash", inputHash)
         .maybeSingle();
       if (cached?.result) {
-        return { ...(cached.result as AnalyticsResult), fromCache: true, inputHash };
+        return { ...(cached.result as unknown as AnalyticsResult), fromCache: true, inputHash };
       }
     }
 
