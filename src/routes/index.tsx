@@ -414,6 +414,17 @@ function AnalyticsRunControl({ extra }: { extra: AnalyticsExtra }) {
   );
 }
 
+const PILLAR_COLORS = [
+  "#CC0000",
+  "#F87171",
+  "#FB923C",
+  "#FBBF24",
+  "#34D399",
+  "#60A5FA",
+  "#A78BFA",
+  "#F472B6",
+];
+
 function AnalyticsPanel({
   data,
   isPending,
@@ -425,7 +436,7 @@ function AnalyticsPanel({
 }) {
   return (
     <section className="animate-fade-in space-y-5">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-crimson/10 text-crimson ring-1 ring-crimson/20">
             <Sparkles className="h-5 w-5" />
@@ -436,11 +447,21 @@ function AnalyticsPanel({
               {isPending
                 ? "AI is analysing every scraped post…"
                 : data
-                  ? `${data.postsAnalysed} posts analysed · updated ${new Date(data.generatedAt).toLocaleTimeString()}`
+                  ? `${data.postsAnalysed} posts analysed · updated ${new Date(data.generatedAt).toLocaleTimeString()}${data.fromCache ? " · cached" : ""}`
                   : errorMessage ?? "No analysis yet"}
             </p>
           </div>
         </div>
+        {data ? (
+          <button
+            type="button"
+            onClick={() => downloadReport(data)}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-crimson/20 bg-crimson/10 px-3 py-2 text-xs font-medium text-crimson transition-colors hover:bg-crimson/20"
+          >
+            <Download className="h-3.5 w-3.5" />
+            <span>Export Report</span>
+          </button>
+        ) : null}
       </div>
 
       {isPending ? (
@@ -453,76 +474,19 @@ function AnalyticsPanel({
           <AlertCircle className="h-5 w-5" /> {errorMessage}
         </div>
       ) : data ? (
-        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
-          <PanelCard
-            icon={Quote}
-            title="Top Performing Hooks"
-            subtitle="First line of each caption, ranked by engagement"
-          >
-            {data.hooks.length === 0 ? (
-              <EmptyRow>No captions available.</EmptyRow>
-            ) : (
-              <ol className="space-y-2.5">
-                {data.hooks.map((h, i) => (
-                  <li
-                    key={`${h.username}-${i}`}
-                    className="rounded-lg border border-white/5 bg-white/[0.03] p-3"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <p className="text-sm leading-snug text-white/90">
-                        <span className="mr-2 text-crimson">#{i + 1}</span>
-                        {h.hook}
-                      </p>
-                      <span className="shrink-0 text-xs text-muted-foreground">
-                        @{h.username}
-                      </span>
-                    </div>
-                    <div className="mt-1.5 flex gap-3 text-[11px] tabular-nums text-muted-foreground">
-                      <span>{formatNum(h.likes)} likes</span>
-                      <span>{formatNum(h.comments)} comments</span>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-            )}
-          </PanelCard>
-
-          <PanelCard
-            icon={Layers}
-            title="Best Content Pillars"
-            subtitle="AI classification across all scraped posts"
-          >
-            <div className="space-y-2">
-              {data.pillars.map((p) => {
-                const max = Math.max(1, ...data.pillars.map((x) => x.count));
-                const pct = (p.count / max) * 100;
-                return (
-                  <div
-                    key={p.pillar}
-                    className="rounded-lg border border-white/5 bg-white/[0.03] p-3"
-                  >
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="font-medium text-white/90">{p.pillar}</span>
-                      <span className="tabular-nums text-muted-foreground">
-                        {p.count} post{p.count === 1 ? "" : "s"}
-                      </span>
-                    </div>
-                    <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-white/10">
-                      <div
-                        className="h-full rounded-full bg-crimson transition-all duration-700"
-                        style={{ width: `${pct}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
+        <div className="space-y-4">
+          {data.fromCache ? (
+            <div className="flex items-center gap-2 rounded-lg border border-white/5 bg-white/[0.03] px-3 py-2 text-xs text-muted-foreground">
+              <Database className="h-3.5 w-3.5 text-crimson" />
+              Loaded from cache — Scout data unchanged since last run.
             </div>
-          </PanelCard>
+          ) : null}
 
-          <PanelCard
+          <CollapsibleSection
             icon={Trophy}
             title="Competitor Leaderboard"
             subtitle="Sorted by engagement rate"
+            defaultOpen
           >
             {data.leaderboard.length === 0 ? (
               <EmptyRow>No competitor data.</EmptyRow>
@@ -536,15 +500,14 @@ function AnalyticsPanel({
                       <th className="pb-2 text-right font-medium">Avg Likes</th>
                       <th className="pb-2 text-right font-medium">Avg Comm.</th>
                       <th className="pb-2 text-right font-medium">ER%</th>
+                      <th className="pb-2 text-right font-medium">Growth</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/5">
                     {data.leaderboard.map((r) => (
                       <tr key={r.username} className="text-white/90">
                         <td className="py-2 font-medium">@{r.username}</td>
-                        <td className="py-2 text-right tabular-nums">
-                          {formatNum(r.followers)}
-                        </td>
+                        <td className="py-2 text-right tabular-nums">{formatNum(r.followers)}</td>
                         <td className="py-2 text-right tabular-nums">
                           {formatNum(Math.round(r.avgLikes))}
                         </td>
@@ -554,66 +517,294 @@ function AnalyticsPanel({
                         <td className="py-2 text-right font-semibold tabular-nums text-crimson">
                           {r.engagementRate.toFixed(2)}%
                         </td>
+                        <td className="py-2 text-right">
+                          <span className="inline-flex items-center gap-1.5">
+                            <span className="h-1.5 w-14 overflow-hidden rounded-full bg-white/10">
+                              <span
+                                className="block h-full rounded-full bg-emerald-400"
+                                style={{ width: `${r.growthScore}%` }}
+                              />
+                            </span>
+                            <span className="w-8 text-right text-xs tabular-nums text-white/80">
+                              {r.growthScore}
+                            </span>
+                          </span>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             )}
-          </PanelCard>
+          </CollapsibleSection>
 
-          <PanelCard
+          <CollapsibleSection icon={Layers} title="Content Pillars" subtitle="Distribution across scraped posts">
+            <PillarsDonut pillars={data.pillars} />
+          </CollapsibleSection>
+
+          <CollapsibleSection
             icon={TrendingUp}
             title="Opportunity Finder"
-            subtitle="Trends and gaps across competitors"
+            subtitle="10 gaps and trends across competitors"
           >
             {data.opportunities.length === 0 ? (
               <EmptyRow>No opportunities found.</EmptyRow>
             ) : (
-              <ul className="space-y-2">
+              <ul className="grid grid-cols-1 gap-2 md:grid-cols-2">
                 {data.opportunities.map((o, i) => (
                   <li
                     key={i}
                     className="flex gap-3 rounded-lg border border-white/5 bg-white/[0.03] p-3 text-sm text-white/90"
                   >
-                    <TrendingUp className="mt-0.5 h-4 w-4 shrink-0 text-crimson" />
+                    <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-crimson/15 text-xs font-semibold text-crimson">
+                      {i + 1}
+                    </span>
                     <span>{o}</span>
                   </li>
                 ))}
               </ul>
             )}
-          </PanelCard>
+          </CollapsibleSection>
 
-          <div className="xl:col-span-2">
-            <PanelCard
-              icon={Lightbulb}
-              title="AI Recommendations"
-              subtitle="10 content ideas tailored to Sahil's audience"
-            >
-              {data.recommendations.length === 0 ? (
-                <EmptyRow>No recommendations generated.</EmptyRow>
-              ) : (
-                <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
-                  {data.recommendations.map((r, i) => (
-                    <div
-                      key={i}
-                      className="flex gap-3 rounded-lg border border-white/5 bg-white/[0.03] p-3 text-sm text-white/90"
-                    >
-                      <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-crimson/15 text-xs font-semibold text-crimson">
-                        {i + 1}
-                      </span>
-                      <span>{r}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </PanelCard>
-          </div>
+          <CollapsibleSection
+            icon={Lightbulb}
+            title="AI Recommendations"
+            subtitle="10 content ideas tailored to @sahil_r_fitness"
+          >
+            {data.recommendations.length === 0 ? (
+              <EmptyRow>No recommendations generated.</EmptyRow>
+            ) : (
+              <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+                {data.recommendations.map((r, i) => (
+                  <RecommendationCard key={i} rec={r} index={i} />
+                ))}
+              </div>
+            )}
+          </CollapsibleSection>
+
+          <CollapsibleSection
+            icon={Hash}
+            title="Trending Keywords"
+            subtitle="Top 25 words and hashtags from competitor captions"
+          >
+            {data.keywords.length === 0 ? (
+              <EmptyRow>No keywords extracted.</EmptyRow>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {data.keywords.map((k) => (
+                  <a
+                    key={k.term}
+                    href={
+                      k.isHashtag
+                        ? `https://www.instagram.com/explore/tags/${encodeURIComponent(k.term.replace(/^#/, ""))}/`
+                        : `https://www.instagram.com/explore/search/keyword/?q=${encodeURIComponent(k.term)}`
+                    }
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      k.isHashtag
+                        ? "border-crimson/30 bg-crimson/10 text-crimson hover:bg-crimson/20"
+                        : "border-white/10 bg-white/[0.04] text-white/80 hover:bg-white/[0.08]"
+                    }`}
+                  >
+                    <span>{k.term}</span>
+                    <span className="tabular-nums opacity-60">{k.count}</span>
+                  </a>
+                ))}
+              </div>
+            )}
+          </CollapsibleSection>
         </div>
       ) : null}
     </section>
   );
 }
+
+function CollapsibleSection({
+  icon: Icon,
+  title,
+  subtitle,
+  defaultOpen = false,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  subtitle?: string;
+  defaultOpen?: boolean;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="glass-card overflow-hidden rounded-2xl">
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className="flex w-full items-center justify-between gap-3 px-5 py-4 text-left transition-colors hover:bg-white/[0.03] lg:px-6"
+      >
+        <div className="flex items-start gap-3">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-crimson/10 text-crimson ring-1 ring-crimson/20">
+            <Icon className="h-4 w-4" />
+          </div>
+          <div>
+            <h3 className="text-base font-semibold text-white">{title}</h3>
+            {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
+          </div>
+        </div>
+        <ChevronDown
+          className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform duration-300 ${
+            open ? "rotate-180" : ""
+          }`}
+        />
+      </button>
+      {open ? <div className="border-t border-white/5 px-5 py-5 lg:px-6">{children}</div> : null}
+    </div>
+  );
+}
+
+function PillarsDonut({ pillars }: { pillars: AnalyticsResult["pillars"] }) {
+  const total = pillars.reduce((s, p) => s + p.count, 0);
+  const data = pillars.filter((p) => p.count > 0);
+  if (total === 0) return <EmptyRow>No posts classified yet.</EmptyRow>;
+  return (
+    <div className="grid grid-cols-1 items-center gap-6 md:grid-cols-2">
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={data}
+              dataKey="count"
+              nameKey="pillar"
+              innerRadius={60}
+              outerRadius={95}
+              paddingAngle={2}
+              stroke="none"
+            >
+              {data.map((entry, i) => (
+                <Cell key={entry.pillar} fill={PILLAR_COLORS[i % PILLAR_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip
+              contentStyle={{
+                background: "rgba(0,0,0,0.9)",
+                border: "1px solid rgba(255,255,255,0.1)",
+                borderRadius: 8,
+                fontSize: 12,
+              }}
+              itemStyle={{ color: "#fff" }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+      <ul className="space-y-2">
+        {pillars.map((p, i) => {
+          const pct = total > 0 ? ((p.count / total) * 100).toFixed(0) : "0";
+          return (
+            <li
+              key={p.pillar}
+              className="flex items-center justify-between rounded-lg border border-white/5 bg-white/[0.03] px-3 py-2 text-sm"
+            >
+              <span className="flex items-center gap-2 text-white/90">
+                <span
+                  className="h-2.5 w-2.5 rounded-full"
+                  style={{ background: PILLAR_COLORS[i % PILLAR_COLORS.length] }}
+                />
+                {p.pillar}
+              </span>
+              <span className="tabular-nums text-xs text-muted-foreground">
+                {p.count} · {pct}%
+              </span>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
+  );
+}
+
+function RecommendationCard({ rec, index }: { rec: Recommendation; index: number }) {
+  return (
+    <div className="rounded-lg border border-white/5 bg-white/[0.03] p-3.5">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <span className="flex h-5 w-5 items-center justify-center rounded bg-crimson/15 text-[10px] text-crimson">
+            {index + 1}
+          </span>
+          <span
+            className={`rounded px-1.5 py-0.5 text-[10px] ${
+              rec.format === "Reel"
+                ? "bg-crimson/15 text-crimson"
+                : "bg-emerald-400/15 text-emerald-400"
+            }`}
+          >
+            {rec.format}
+          </span>
+        </span>
+        <span className="flex items-center gap-1 text-xs font-semibold tabular-nums text-emerald-400">
+          <TrendingUp className="h-3 w-3" />
+          {rec.score}
+        </span>
+      </div>
+      <p className="text-sm leading-snug text-white/95">{rec.hook}</p>
+      <p className="mt-2 text-xs text-muted-foreground">
+        <span className="text-white/60">CTA:</span> {rec.cta}
+      </p>
+    </div>
+  );
+}
+
+function downloadReport(data: AnalyticsResult) {
+  const md = buildMarkdownReport(data);
+  const blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  const stamp = new Date(data.generatedAt).toISOString().replace(/[:.]/g, "-");
+  a.href = url;
+  a.download = `fitwid-analytics-${stamp}.md`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function buildMarkdownReport(data: AnalyticsResult): string {
+  const lines: string[] = [];
+  lines.push(`# FitWid Analytics Report`);
+  lines.push(``);
+  lines.push(`_Generated ${new Date(data.generatedAt).toLocaleString()} · ${data.postsAnalysed} posts analysed_`);
+  lines.push(``);
+  lines.push(`## Competitor Leaderboard`);
+  lines.push(``);
+  lines.push(`| Username | Followers | Avg Likes | Avg Comments | Engagement Rate | Growth Score |`);
+  lines.push(`| --- | ---: | ---: | ---: | ---: | ---: |`);
+  data.leaderboard.forEach((r) => {
+    lines.push(
+      `| @${r.username} | ${r.followers.toLocaleString()} | ${Math.round(r.avgLikes).toLocaleString()} | ${Math.round(r.avgComments).toLocaleString()} | ${r.engagementRate.toFixed(2)}% | ${r.growthScore} |`,
+    );
+  });
+  lines.push(``);
+  lines.push(`## Content Pillars`);
+  lines.push(``);
+  data.pillars.forEach((p) => lines.push(`- **${p.pillar}** — ${p.count} posts`));
+  lines.push(``);
+  lines.push(`## Opportunity Finder`);
+  lines.push(``);
+  data.opportunities.forEach((o, i) => lines.push(`${i + 1}. ${o}`));
+  lines.push(``);
+  lines.push(`## AI Recommendations`);
+  lines.push(``);
+  data.recommendations.forEach((r, i) => {
+    lines.push(`### ${i + 1}. [${r.format}] ${r.hook}`);
+    lines.push(`- **CTA:** ${r.cta}`);
+    lines.push(`- **Estimated engagement:** ${r.score}/100`);
+    lines.push(``);
+  });
+  lines.push(`## Trending Keywords`);
+  lines.push(``);
+  lines.push(data.keywords.map((k) => `\`${k.term}\` (${k.count})`).join(" · "));
+  lines.push(``);
+  return lines.join("\n");
+}
+
 
 function PanelCard({
   icon: Icon,
