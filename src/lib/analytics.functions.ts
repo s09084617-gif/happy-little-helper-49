@@ -306,7 +306,7 @@ export const analyzeScoutData = createServerFn({ method: "POST" })
 
     await supabaseAdmin
       .from("analytics_cache")
-      .upsert({ input_hash: inputHash, result: result as unknown as Record<string, unknown> }, { onConflict: "input_hash" });
+      .upsert({ input_hash: inputHash, result: JSON.parse(JSON.stringify(result)) }, { onConflict: "input_hash" });
 
     return result;
   });
