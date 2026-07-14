@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import {
   Search,
   PenTool,
@@ -21,11 +22,19 @@ import {
   Sparkles,
   Trophy,
   Layers,
-  Quote,
   TrendingUp,
+  ChevronDown,
+  Hash,
+  Download,
+  Database,
 } from "lucide-react";
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { fetchScoutData } from "@/lib/scout.functions";
-import { analyzeScoutData, type AnalyticsResult } from "@/lib/analytics.functions";
+import {
+  analyzeScoutData,
+  type AnalyticsResult,
+  type Recommendation,
+} from "@/lib/analytics.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
