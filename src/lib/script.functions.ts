@@ -105,9 +105,9 @@ Rules:
   const hooks = Array.isArray(parsed.hooks) ? parsed.hooks.slice(0, 3).map(String) : [];
   while (hooks.length < 3) hooks.push("");
 
-  const rawHashtags = Array.isArray(parsed.hashtags) ? parsed.hashtags.map(String) : [];
+  const rawHashtags: string[] = Array.isArray(parsed.hashtags) ? parsed.hashtags.map(String) : [];
   const hashtags = rawHashtags
-    .map((h) => (h.startsWith("#") ? h : `#${h}`))
+    .map((h: string) => (h.startsWith("#") ? h : `#${h}`))
     .slice(0, 15);
   while (hashtags.length < 15) hashtags.push("#fitness");
 
