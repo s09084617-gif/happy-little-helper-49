@@ -321,8 +321,56 @@ function Index() {
                       ? "Analysis failed"
                       : null
                 }
+                onGenerateScript={(rec) =>
+                  openScriptFor({
+                    topic: rec.hook,
+                    cta: rec.cta,
+                    format: rec.format,
+                  })
+                }
               />
             )}
+
+            {(scriptTarget || scriptGen.isPending || scriptContent) && (
+              <ScriptPanel
+                target={scriptTarget}
+                content={scriptContent}
+                isGenerating={scriptGen.isPending}
+                errorMessage={
+                  scriptGen.error instanceof Error
+                    ? scriptGen.error.message
+                    : scriptGen.isError
+                      ? "Generation failed"
+                      : null
+                }
+                onRegenerate={() => {
+                  if (scriptTarget) {
+                    setScriptContent(null);
+                    setScriptSavedId(null);
+                    scriptGen.mutate(scriptTarget);
+                  }
+                }}
+                onSave={() => scriptSave.mutate()}
+                isSaving={scriptSave.isPending}
+                savedId={scriptSavedId}
+                saveError={
+                  scriptSave.error instanceof Error
+                    ? scriptSave.error.message
+                    : scriptSave.isError
+                      ? "Save failed"
+                      : null
+                }
+                onClose={() => {
+                  setScriptTarget(null);
+                  setScriptContent(null);
+                  setScriptSavedId(null);
+                  scriptGen.reset();
+                  scriptSave.reset();
+                }}
+                libraryCount={scriptCount}
+              />
+            )}
+
           </main>
 
           <aside className="w-full shrink-0 animate-fade-in xl:w-80 xl:pl-2">
