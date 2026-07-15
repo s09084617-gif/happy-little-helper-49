@@ -723,7 +723,12 @@ function AnalyticsPanel({
             ) : (
               <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
                 {data.recommendations.map((r, i) => (
-                  <RecommendationCard key={i} rec={r} index={i} />
+                  <RecommendationCard
+                    key={i}
+                    rec={r}
+                    index={i}
+                    onGenerateScript={onGenerateScript}
+                  />
                 ))}
               </div>
             )}
