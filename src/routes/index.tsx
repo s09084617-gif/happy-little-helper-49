@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   Search,
@@ -27,6 +27,14 @@ import {
   Hash,
   Download,
   Database,
+  Copy,
+  Save,
+  Wand2,
+  Film,
+  Type,
+  Mic,
+  Camera,
+  Gauge,
 } from "lucide-react";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip } from "recharts";
 import { fetchScoutData } from "@/lib/scout.functions";
@@ -35,10 +43,17 @@ import {
   type AnalyticsResult,
   type Recommendation,
 } from "@/lib/analytics.functions";
+import {
+  generateScript,
+  saveScript,
+  listScripts,
+  type ScriptContent,
+} from "@/lib/script.functions";
 
 export const Route = createFileRoute("/")({
   component: Index,
 });
+
 
 interface AgentCard {
   id: string;
