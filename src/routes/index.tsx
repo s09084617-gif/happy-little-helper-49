@@ -574,10 +574,12 @@ function AnalyticsPanel({
   data,
   isPending,
   errorMessage,
+  onGenerateScript,
 }: {
   data: AnalyticsResult | null;
   isPending: boolean;
   errorMessage: string | null;
+  onGenerateScript?: (rec: Recommendation) => void;
 }) {
   return (
     <section className="animate-fade-in space-y-5">
