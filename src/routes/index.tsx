@@ -201,6 +201,9 @@ function Index() {
     if (a.id === "analytics") {
       return { ...a, ...analyticsStatus };
     }
+    if (a.id === "script") {
+      return { ...a, ...scriptStatus };
+    }
     return a;
   });
 
@@ -211,9 +214,22 @@ function Index() {
     { label: "Posts Analysed", value: String(totalPosts), icon: Activity },
     { label: "Competitors Tracked", value: String(competitorsTracked), icon: Target },
     { label: "Ideas Generated", value: String(analytics.data?.recommendations.length ?? 0), icon: Lightbulb },
-    { label: "Scripts Created", value: "0", icon: FileText },
+    { label: "Scripts Created", value: String(scriptCount), icon: FileText },
     { label: "DMs Pending", value: "0", icon: Send },
   ];
+
+  const openScriptFor = (input: {
+    topic: string;
+    cta?: string;
+    format?: "Reel" | "Carousel";
+    competitorInspiration?: string;
+  }) => {
+    setScriptTarget(input);
+    setScriptContent(null);
+    setScriptSavedId(null);
+    scriptGen.mutate(input);
+  };
+
 
   return (
     <div className="min-h-screen bg-background text-foreground">
