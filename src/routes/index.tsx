@@ -1099,3 +1099,279 @@ function SummaryMetricComponent({
     </div>
   );
 }
+
+interface ScriptTarget {
+  topic: string;
+  cta?: string;
+  format?: "Reel" | "Carousel";
+  competitorInspiration?: string;
+}
+
+function ScriptPanel({
+  target,
+  content,
+  isGenerating,
+  errorMessage,
+  onRegenerate,
+  onSave,
+  isSaving,
+  savedId,
+  saveError,
+  onClose,
+  libraryCount,
+}: {
+  target: ScriptTarget | null;
+  content: ScriptContent | null;
+  isGenerating: boolean;
+  errorMessage: string | null;
+  onRegenerate: () => void;
+  onSave: () => void;
+  isSaving: boolean;
+  savedId: string | null;
+  saveError: string | null;
+  onClose: () => void;
+  libraryCount: number;
+}) {
+  return (
+    <section className="animate-fade-in space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-crimson/10 text-crimson ring-1 ring-crimson/20">
+            <PenTool className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-white">Script Studio</h2>
+            <p className="text-sm text-muted-foreground">
+              {isGenerating
+                ? "AI is writing your Reel script…"
+                : target
+                  ? `Idea: ${target.topic.slice(0, 90)}${target.topic.length > 90 ? "…" : ""}`
+                  : "Pick a recommendation to generate a script"}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="hidden rounded-full bg-white/5 px-2.5 py-1 text-xs font-medium text-muted-foreground sm:inline-flex">
+            Library: {libraryCount}
+          </span>
+          <button
+            type="button"
+            onClick={onRegenerate}
+            disabled={!target || isGenerating}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-2 text-xs font-medium text-white/80 transition-colors hover:bg-white/[0.08] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isGenerating ? "animate-spin" : ""}`} />
+            Regenerate
+          </button>
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!content || isSaving || !!savedId}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-crimson/20 bg-crimson/10 px-3 py-2 text-xs font-semibold text-crimson transition-colors hover:bg-crimson/20 disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            {isSaving ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : savedId ? (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            ) : (
+              <Save className="h-3.5 w-3.5" />
+            )}
+            {savedId ? "Saved" : isSaving ? "Saving" : "Save to Library"}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-2 text-xs text-white/60 transition-colors hover:bg-white/[0.08]"
+            aria-label="Close script panel"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+
+      {saveError ? (
+        <div className="glass-card flex items-center gap-2 rounded-2xl border-crimson/30 p-3 text-xs text-crimson">
+          <AlertCircle className="h-4 w-4" /> {saveError}
+        </div>
+      ) : null}
+
+      {isGenerating ? (
+        <div className="glass-card flex items-center gap-3 rounded-2xl p-8 text-sm text-muted-foreground">
+          <Loader2 className="h-5 w-5 animate-spin text-crimson" />
+          Crafting hooks, script, captions and shot list…
+        </div>
+      ) : errorMessage && !content ? (
+        <div className="glass-card flex items-center gap-3 rounded-2xl border-crimson/30 p-6 text-sm text-crimson">
+          <AlertCircle className="h-5 w-5" /> {errorMessage}
+        </div>
+      ) : content ? (
+        <div className="space-y-4">
+          <ScriptSection icon={Sparkles} title="Viral Hooks" subtitle="3 scroll-stoppers">
+            <div className="grid grid-cols-1 gap-2 md:grid-cols-3">
+              {content.hooks.map((h, i) => (
+                <CopyableCard key={i} value={h}>
+                  <p className="text-sm leading-snug text-white/95">
+                    <span className="mr-1.5 text-xs font-semibold text-crimson">#{i + 1}</span>
+                    {h}
+                  </p>
+                </CopyableCard>
+              ))}
+            </div>
+          </ScriptSection>
+
+          <ScriptSection icon={Film} title="Reel Script" subtitle="45–60 seconds">
+            <CopyableBlock value={content.reelScript} />
+          </ScriptSection>
+
+          <ScriptSection icon={Type} title="Short Caption">
+            <CopyableBlock value={content.shortCaption} />
+          </ScriptSection>
+
+          <ScriptSection icon={FileText} title="Long Storytelling Caption">
+            <CopyableBlock value={content.longCaption} />
+          </ScriptSection>
+
+          <ScriptSection icon={Send} title="Call to Action">
+            <CopyableBlock value={content.cta} />
+          </ScriptSection>
+
+          <ScriptSection icon={Hash} title="Hashtags" subtitle="15 curated tags">
+            <CopyableCard value={content.hashtags.join(" ")}>
+              <div className="flex flex-wrap gap-1.5">
+                {content.hashtags.map((h) => (
+                  <span
+                    key={h}
+                    className="rounded-full border border-crimson/20 bg-crimson/10 px-2.5 py-0.5 text-xs font-medium text-crimson"
+                  >
+                    {h}
+                  </span>
+                ))}
+              </div>
+            </CopyableCard>
+          </ScriptSection>
+
+          <ScriptSection icon={Type} title="Thumbnail Title">
+            <CopyableCard value={content.thumbnailTitle}>
+              <p className="text-2xl font-bold uppercase tracking-tight text-white">
+                {content.thumbnailTitle}
+              </p>
+            </CopyableCard>
+          </ScriptSection>
+
+          <ScriptSection icon={Camera} title="B-Roll Shot List">
+            <CopyableCard value={content.bRoll.map((s, i) => `${i + 1}. ${s}`).join("\n")}>
+              <ol className="space-y-1.5 text-sm text-white/90">
+                {content.bRoll.map((s, i) => (
+                  <li key={i} className="flex gap-2">
+                    <span className="text-xs font-semibold text-crimson">{i + 1}.</span>
+                    <span>{s}</span>
+                  </li>
+                ))}
+              </ol>
+            </CopyableCard>
+          </ScriptSection>
+
+          <ScriptSection icon={Mic} title="Voiceover Script">
+            <CopyableBlock value={content.voiceover} />
+          </ScriptSection>
+
+          <ScriptSection icon={Gauge} title="Estimated Watch Time Score">
+            <div className="rounded-lg border border-white/5 bg-white/[0.03] p-4">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-white/70">Retention potential</span>
+                <span className="text-2xl font-bold tabular-nums text-emerald-400">
+                  {content.watchTimeScore}
+                  <span className="text-sm text-muted-foreground">/100</span>
+                </span>
+              </div>
+              <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-crimson to-emerald-400 transition-all duration-700"
+                  style={{ width: `${content.watchTimeScore}%` }}
+                />
+              </div>
+            </div>
+          </ScriptSection>
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
+function ScriptSection({
+  icon: Icon,
+  title,
+  subtitle,
+  children,
+}: {
+  icon: React.ElementType;
+  title: string;
+  subtitle?: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="glass-card overflow-hidden rounded-2xl px-5 py-5 lg:px-6">
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-crimson/10 text-crimson ring-1 ring-crimson/20">
+          <Icon className="h-4 w-4" />
+        </div>
+        <div>
+          <h3 className="text-base font-semibold text-white">{title}</h3>
+          {subtitle ? <p className="text-xs text-muted-foreground">{subtitle}</p> : null}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <button
+      type="button"
+      onClick={async () => {
+        try {
+          await navigator.clipboard.writeText(value);
+          setCopied(true);
+          setTimeout(() => setCopied(false), 1500);
+        } catch {
+          // noop
+        }
+      }}
+      className="inline-flex items-center gap-1 rounded-md border border-white/10 bg-white/[0.04] px-2 py-1 text-[11px] font-medium text-white/70 transition-colors hover:bg-white/[0.08]"
+    >
+      {copied ? (
+        <>
+          <CheckCircle2 className="h-3 w-3 text-emerald-400" /> Copied
+        </>
+      ) : (
+        <>
+          <Copy className="h-3 w-3" /> Copy
+        </>
+      )}
+    </button>
+  );
+}
+
+function CopyableCard({ value, children }: { value: string; children: React.ReactNode }) {
+  return (
+    <div className="group relative rounded-lg border border-white/5 bg-white/[0.03] p-3.5">
+      <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
+        <CopyButton value={value} />
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function CopyableBlock({ value }: { value: string }) {
+  return (
+    <div className="group relative rounded-lg border border-white/5 bg-white/[0.03] p-4">
+      <div className="absolute right-2 top-2 opacity-0 transition-opacity group-hover:opacity-100">
+        <CopyButton value={value} />
+      </div>
+      <p className="whitespace-pre-wrap text-sm leading-relaxed text-white/90">{value}</p>
+    </div>
+  );
+}
