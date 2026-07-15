@@ -97,6 +97,61 @@ function Index() {
     mutationFn: () => analyzeScoutData(),
   });
 
+  const queryClient = useQueryClient();
+  const scripts = useQuery({
+    queryKey: ["scripts"],
+    queryFn: () => listScripts(),
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  const [scriptTarget, setScriptTarget] = useState<{
+    topic: string;
+    cta?: string;
+    format?: "Reel" | "Carousel";
+    competitorInspiration?: string;
+  } | null>(null);
+  const [scriptContent, setScriptContent] = useState<ScriptContent | null>(null);
+  const [scriptSavedId, setScriptSavedId] = useState<string | null>(null);
+
+  const scriptGen = useMutation({
+    mutationFn: (input: {
+      topic: string;
+      cta?: string;
+      format?: "Reel" | "Carousel";
+      competitorInspiration?: string;
+    }) =>
+      generateScript({
+        data: {
+          topic: input.topic,
+          cta: input.cta,
+          format: input.format,
+          competitorInspiration: input.competitorInspiration,
+        },
+      }),
+    onSuccess: (content) => {
+      setScriptContent(content);
+      setScriptSavedId(null);
+    },
+  });
+
+  const scriptSave = useMutation({
+    mutationFn: () => {
+      if (!scriptTarget || !scriptContent) throw new Error("Nothing to save");
+      return saveScript({
+        data: {
+          topic: scriptTarget.topic,
+          competitorInspiration: scriptTarget.competitorInspiration,
+          content: scriptContent,
+        },
+      });
+    },
+    onSuccess: (row) => {
+      setScriptSavedId(row.id);
+      queryClient.invalidateQueries({ queryKey: ["scripts"] });
+    },
+  });
+
   const scoutReady = !!scout.data && scout.data.profiles.length > 0;
 
   const analyticsStatus: {
@@ -114,6 +169,17 @@ function Index() {
         : scoutReady
           ? { status: "Ready to analyse", statusType: "waiting" }
           : { status: "Idle", statusType: "idle" };
+
+  const scriptCount = scripts.data?.length ?? 0;
+  const scriptStatus: { status: string; statusType: AgentCard["statusType"] } =
+    scriptGen.isPending
+      ? { status: "Writing your script…", statusType: "loading" }
+      : scriptContent
+        ? { status: scriptSavedId ? "Saved to Library" : "Draft ready", statusType: "active" }
+        : scriptCount > 0
+          ? { status: `${scriptCount} script${scriptCount === 1 ? "" : "s"} in Library`, statusType: "active" }
+          : { status: "Idle", statusType: "idle" };
+
 
   const agents: AgentCard[] = baseAgents.map((a) => {
     if (a.id === "scout") {
