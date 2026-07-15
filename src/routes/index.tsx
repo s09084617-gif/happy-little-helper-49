@@ -873,7 +873,15 @@ function PillarsDonut({ pillars }: { pillars: AnalyticsResult["pillars"] }) {
   );
 }
 
-function RecommendationCard({ rec, index }: { rec: Recommendation; index: number }) {
+function RecommendationCard({
+  rec,
+  index,
+  onGenerateScript,
+}: {
+  rec: Recommendation;
+  index: number;
+  onGenerateScript?: (rec: Recommendation) => void;
+}) {
   return (
     <div className="rounded-lg border border-white/5 bg-white/[0.03] p-3.5">
       <div className="mb-2 flex items-center justify-between gap-2">
@@ -900,9 +908,20 @@ function RecommendationCard({ rec, index }: { rec: Recommendation; index: number
       <p className="mt-2 text-xs text-muted-foreground">
         <span className="text-white/60">CTA:</span> {rec.cta}
       </p>
+      {onGenerateScript ? (
+        <button
+          type="button"
+          onClick={() => onGenerateScript(rec)}
+          className="mt-3 inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-crimson/20 bg-crimson/10 px-2.5 py-1.5 text-xs font-semibold text-crimson transition-colors hover:bg-crimson/20"
+        >
+          <Wand2 className="h-3.5 w-3.5" />
+          Generate Script
+        </button>
+      ) : null}
     </div>
   );
 }
+
 
 function downloadReport(data: AnalyticsResult) {
   const md = buildMarkdownReport(data);
