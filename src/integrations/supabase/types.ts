@@ -35,6 +35,45 @@ export type Database = {
         }
         Relationships: []
       }
+      scripts: {
+        Row: {
+          caption: string
+          competitor_inspiration: string | null
+          created_at: string
+          hashtags: Json
+          hook: string
+          id: string
+          script: Json
+          status: string
+          topic: string
+          updated_at: string
+        }
+        Insert: {
+          caption: string
+          competitor_inspiration?: string | null
+          created_at?: string
+          hashtags?: Json
+          hook: string
+          id?: string
+          script: Json
+          status?: string
+          topic: string
+          updated_at?: string
+        }
+        Update: {
+          caption?: string
+          competitor_inspiration?: string | null
+          created_at?: string
+          hashtags?: Json
+          hook?: string
+          id?: string
+          script?: Json
+          status?: string
+          topic?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
