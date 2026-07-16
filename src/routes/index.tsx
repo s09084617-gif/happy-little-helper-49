@@ -49,6 +49,19 @@ import {
   listScripts,
   type ScriptContent,
 } from "@/lib/script.functions";
+import {
+  listScheduledPosts,
+  upsertScheduledPost,
+  movePost,
+  deleteScheduledPost,
+  duplicateScheduledPost,
+  markPostPublished,
+  autoPlanCalendar,
+  type ScheduledPost,
+  type PostFormat,
+  type PostStatus,
+} from "@/lib/calendar.functions";
+import { Flame, CalendarCheck, CalendarClock, Plus, Trash2, MoreVertical, GripVertical } from "lucide-react";
 
 export const Route = createFileRoute("/")({
   component: Index,
