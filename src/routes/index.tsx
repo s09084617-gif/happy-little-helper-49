@@ -264,6 +264,17 @@ function Index() {
     if (a.id === "script") {
       return { ...a, ...scriptStatus };
     }
+    if (a.id === "calendar") {
+      if (autoPlan.isPending) return { ...a, status: "Generating 30-day plan…", statusType: "loading" };
+      if (autoPlan.isError) return { ...a, status: "Auto-plan failed", statusType: "error" };
+      if (scheduledPosts.length > 0)
+        return {
+          ...a,
+          status: `${calendarMetrics.thisWeek} posts this week · ${scheduledPosts.length} planned`,
+          statusType: "active",
+        };
+      return { ...a, status: "Ready to plan", statusType: "waiting" };
+    }
     return a;
   });
 
@@ -275,6 +286,9 @@ function Index() {
     { label: "Competitors Tracked", value: String(competitorsTracked), icon: Target },
     { label: "Ideas Generated", value: String(analytics.data?.recommendations.length ?? 0), icon: Lightbulb },
     { label: "Scripts Created", value: String(scriptCount), icon: FileText },
+    { label: "Posts Scheduled", value: String(scheduledPosts.length), icon: CalendarCheck },
+    { label: "This Week's Plan", value: String(calendarMetrics.thisWeek), icon: CalendarClock },
+    { label: "Publishing Streak", value: `${calendarMetrics.streak}d`, icon: Flame },
     { label: "DMs Pending", value: "0", icon: Send },
   ];
 
