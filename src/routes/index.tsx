@@ -165,6 +165,53 @@ function Index() {
     },
   });
 
+  // ---------- Calendar Agent ----------
+  const scheduled = useQuery({
+    queryKey: ["scheduled_posts"],
+    queryFn: () => listScheduledPosts(),
+    retry: 1,
+    refetchOnWindowFocus: false,
+  });
+
+  const invalidateCal = () =>
+    queryClient.invalidateQueries({ queryKey: ["scheduled_posts"] });
+
+  const autoPlan = useMutation({
+    mutationFn: (opts?: { scopeWeekOnly?: boolean; startDate?: string }) =>
+      autoPlanCalendar({ data: { ...(opts ?? {}), clear: true } }),
+    onSuccess: () => invalidateCal(),
+  });
+  const moveMut = useMutation({
+    mutationFn: (v: { id: string; scheduled_date: string; slot: number }) =>
+      movePost({ data: v }),
+    onSuccess: () => invalidateCal(),
+  });
+  const deleteMut = useMutation({
+    mutationFn: (id: string) => deleteScheduledPost({ data: { id } }),
+    onSuccess: () => invalidateCal(),
+  });
+  const dupMut = useMutation({
+    mutationFn: (id: string) => duplicateScheduledPost({ data: { id } }),
+    onSuccess: () => invalidateCal(),
+  });
+  const publishMut = useMutation({
+    mutationFn: (id: string) => markPostPublished({ data: { id } }),
+    onSuccess: () => invalidateCal(),
+  });
+  const createMut = useMutation({
+    mutationFn: (v: {
+      scheduled_date: string;
+      slot: number;
+      title: string;
+      pillar: string;
+      format: PostFormat;
+    }) => upsertScheduledPost({ data: v }),
+    onSuccess: () => invalidateCal(),
+  });
+
+  const scheduledPosts = scheduled.data ?? [];
+  const calendarMetrics = computeCalendarMetrics(scheduledPosts);
+
   const scoutReady = !!scout.data && scout.data.profiles.length > 0;
 
   const analyticsStatus: {
