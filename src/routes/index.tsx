@@ -1469,3 +1469,452 @@ function CopyableBlock({ value }: { value: string }) {
     </div>
   );
 }
+
+// ============================================================================
+// Calendar Agent
+// ============================================================================
+
+function startOfWeek(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  const day = x.getDay(); // 0=Sun
+  const diff = day === 0 ? -6 : 1 - day; // shift so Monday=start
+  x.setDate(x.getDate() + diff);
+  return x;
+}
+
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function computeCalendarMetrics(posts: ScheduledPost[]): {
+  thisWeek: number;
+  streak: number;
+} {
+  const now = new Date();
+  const weekStart = startOfWeek(now);
+  const weekEnd = new Date(weekStart);
+  weekEnd.setDate(weekEnd.getDate() + 6);
+  const thisWeek = posts.filter((p) => {
+    const d = new Date(p.scheduled_date + "T00:00:00");
+    return d >= weekStart && d <= weekEnd;
+  }).length;
+
+  // Publishing streak: consecutive days ending today (or yesterday) with at least
+  // one Published post
+  const publishedDays = new Set(
+    posts.filter((p) => p.status === "Published").map((p) => p.scheduled_date),
+  );
+  let streak = 0;
+  const cursor = new Date();
+  cursor.setHours(0, 0, 0, 0);
+  // Allow starting from today or yesterday
+  if (!publishedDays.has(ymd(cursor))) cursor.setDate(cursor.getDate() - 1);
+  while (publishedDays.has(ymd(cursor))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return { thisWeek, streak };
+}
+
+const PILLAR_TINT: Record<string, string> = {
+  "Fat Loss": "bg-crimson/15 text-crimson border-crimson/25",
+  "Muscle Gain": "bg-orange-400/15 text-orange-300 border-orange-400/25",
+  Nutrition: "bg-emerald-400/15 text-emerald-300 border-emerald-400/25",
+  Motivation: "bg-yellow-400/15 text-yellow-300 border-yellow-400/25",
+  "Client Transformations": "bg-pink-400/15 text-pink-300 border-pink-400/25",
+  "Workout Tips": "bg-blue-400/15 text-blue-300 border-blue-400/25",
+  Lifestyle: "bg-violet-400/15 text-violet-300 border-violet-400/25",
+  Education: "bg-teal-400/15 text-teal-300 border-teal-400/25",
+};
+
+const FORMAT_TINT: Record<PostFormat, string> = {
+  Reel: "bg-crimson/20 text-crimson",
+  Carousel: "bg-blue-400/20 text-blue-300",
+  Story: "bg-yellow-400/20 text-yellow-300",
+  Post: "bg-emerald-400/20 text-emerald-300",
+};
+
+const STATUS_TINT: Record<PostStatus, string> = {
+  Idea: "bg-white/10 text-white/70",
+  "Script Ready": "bg-blue-400/20 text-blue-300",
+  Scheduled: "bg-yellow-400/20 text-yellow-300",
+  Published: "bg-emerald-400/20 text-emerald-300",
+};
+
+const WEEKDAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+
+function CalendarPanel({
+  posts,
+  isLoading,
+  isPlanning,
+  planError,
+  onAutoPlan,
+  onRegenerateWeek,
+  onMove,
+  onDelete,
+  onDuplicate,
+  onMarkPublished,
+  onCreate,
+}: {
+  posts: ScheduledPost[];
+  isLoading: boolean;
+  isPlanning: boolean;
+  planError: string | null;
+  onAutoPlan: () => void;
+  onRegenerateWeek: () => void;
+  onMove: (id: string, date: string, slot: number) => void;
+  onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
+  onMarkPublished: (id: string) => void;
+  onCreate: (v: {
+    scheduled_date: string;
+    slot: number;
+    title: string;
+    pillar: string;
+    format: PostFormat;
+  }) => void;
+}) {
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [dragId, setDragId] = useState<string | null>(null);
+  const [dragOver, setDragOver] = useState<string | null>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
+  const [quickTitle, setQuickTitle] = useState("");
+
+  const weekStart = startOfWeek(new Date());
+  weekStart.setDate(weekStart.getDate() + weekOffset * 7);
+
+  const days: { date: Date; ymd: string; label: string; isToday: boolean }[] = [];
+  const todayYmd = ymd(new Date());
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
+    days.push({
+      date: d,
+      ymd: ymd(d),
+      label: WEEKDAYS[i],
+      isToday: ymd(d) === todayYmd,
+    });
+  }
+
+  const byDay = new Map<string, ScheduledPost[]>();
+  for (const p of posts) {
+    const arr = byDay.get(p.scheduled_date) ?? [];
+    arr.push(p);
+    byDay.set(p.scheduled_date, arr);
+  }
+  for (const arr of byDay.values()) arr.sort((a, b) => a.slot - b.slot);
+
+  return (
+    <section className="animate-fade-in space-y-5">
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-crimson/10 text-crimson ring-1 ring-crimson/20">
+            <CalendarDays className="h-5 w-5" />
+          </div>
+          <div>
+            <h2 className="text-xl font-semibold text-white">Content Calendar</h2>
+            <p className="text-sm text-muted-foreground">
+              {isPlanning
+                ? "Building a 30-day plan from analytics + scripts…"
+                : `${posts.length} scheduled · drag posts to move`}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            onClick={() => setWeekOffset((v) => v - 1)}
+            className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/[0.08]"
+          >
+            ← Prev
+          </button>
+          <button
+            type="button"
+            onClick={() => setWeekOffset(0)}
+            className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/[0.08]"
+          >
+            Today
+          </button>
+          <button
+            type="button"
+            onClick={() => setWeekOffset((v) => v + 1)}
+            className="rounded-lg border border-white/10 bg-white/[0.04] px-2.5 py-1.5 text-xs text-white/70 hover:bg-white/[0.08]"
+          >
+            Next →
+          </button>
+          <button
+            type="button"
+            onClick={onRegenerateWeek}
+            disabled={isPlanning}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-white/80 hover:bg-white/[0.08] disabled:opacity-40"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isPlanning ? "animate-spin" : ""}`} />
+            Regenerate Week
+          </button>
+          <button
+            type="button"
+            onClick={onAutoPlan}
+            disabled={isPlanning}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-crimson/20 bg-crimson/10 px-3 py-1.5 text-xs font-semibold text-crimson hover:bg-crimson/20 disabled:opacity-40"
+          >
+            {isPlanning ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
+            Auto Plan 30 Days
+          </button>
+        </div>
+      </div>
+
+      {planError ? (
+        <div className="glass-card flex items-center gap-2 rounded-2xl border-crimson/30 p-3 text-xs text-crimson">
+          <AlertCircle className="h-4 w-4" /> {planError}
+        </div>
+      ) : null}
+
+      <div className="glass-card overflow-hidden rounded-2xl">
+        {isLoading ? (
+          <div className="flex items-center gap-3 p-8 text-sm text-muted-foreground">
+            <Loader2 className="h-5 w-5 animate-spin text-crimson" /> Loading calendar…
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-7 divide-y md:divide-y-0 md:divide-x divide-white/5">
+            {days.map((day) => {
+              const dayPosts = byDay.get(day.ymd) ?? [];
+              const isDropTarget = dragOver === day.ymd;
+              return (
+                <div
+                  key={day.ymd}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOver(day.ymd);
+                  }}
+                  onDragLeave={() => setDragOver((v) => (v === day.ymd ? null : v))}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOver(null);
+                    if (dragId) {
+                      const nextSlot = (dayPosts[dayPosts.length - 1]?.slot ?? 8) + 1;
+                      onMove(dragId, day.ymd, nextSlot);
+                      setDragId(null);
+                    }
+                  }}
+                  className={`min-h-[220px] p-3 transition-colors ${
+                    isDropTarget ? "bg-crimson/5" : ""
+                  } ${day.isToday ? "bg-white/[0.02]" : ""}`}
+                >
+                  <div className="mb-2 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                        {day.label}
+                      </p>
+                      <p className={`text-sm font-semibold ${day.isToday ? "text-crimson" : "text-white/90"}`}>
+                        {day.date.getDate()}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setQuickAddDate(day.ymd);
+                        setQuickTitle("");
+                      }}
+                      className="rounded-md border border-white/10 bg-white/[0.04] p-1 text-white/50 hover:text-white/90"
+                      aria-label="Add post"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </button>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {dayPosts.map((post) => (
+                      <PostChip
+                        key={post.id}
+                        post={post}
+                        isDragging={dragId === post.id}
+                        isMenuOpen={openMenu === post.id}
+                        onDragStart={() => setDragId(post.id)}
+                        onDragEnd={() => setDragId(null)}
+                        onToggleMenu={() =>
+                          setOpenMenu((v) => (v === post.id ? null : post.id))
+                        }
+                        onCloseMenu={() => setOpenMenu(null)}
+                        onDelete={() => {
+                          onDelete(post.id);
+                          setOpenMenu(null);
+                        }}
+                        onDuplicate={() => {
+                          onDuplicate(post.id);
+                          setOpenMenu(null);
+                        }}
+                        onMarkPublished={() => {
+                          onMarkPublished(post.id);
+                          setOpenMenu(null);
+                        }}
+                      />
+                    ))}
+                    {dayPosts.length === 0 ? (
+                      <p className="rounded-md border border-dashed border-white/10 py-4 text-center text-[10px] text-muted-foreground">
+                        Empty
+                      </p>
+                    ) : null}
+                  </div>
+
+                  {quickAddDate === day.ymd ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        if (!quickTitle.trim()) return;
+                        onCreate({
+                          scheduled_date: day.ymd,
+                          slot: (dayPosts[dayPosts.length - 1]?.slot ?? 8) + 1,
+                          title: quickTitle.trim(),
+                          pillar: "Fat Loss",
+                          format: "Reel",
+                        });
+                        setQuickAddDate(null);
+                        setQuickTitle("");
+                      }}
+                      className="mt-2 space-y-1"
+                    >
+                      <input
+                        autoFocus
+                        value={quickTitle}
+                        onChange={(e) => setQuickTitle(e.target.value)}
+                        placeholder="Post title…"
+                        className="w-full rounded-md border border-white/10 bg-black/40 px-2 py-1 text-xs text-white placeholder:text-white/30 focus:border-crimson/50 focus:outline-none"
+                      />
+                      <div className="flex gap-1">
+                        <button
+                          type="submit"
+                          className="flex-1 rounded-md bg-crimson/20 px-2 py-1 text-[10px] font-semibold text-crimson hover:bg-crimson/30"
+                        >
+                          Add
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setQuickAddDate(null)}
+                          className="rounded-md bg-white/5 px-2 py-1 text-[10px] text-white/60 hover:bg-white/10"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    </form>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+function PostChip({
+  post,
+  isDragging,
+  isMenuOpen,
+  onDragStart,
+  onDragEnd,
+  onToggleMenu,
+  onCloseMenu,
+  onDelete,
+  onDuplicate,
+  onMarkPublished,
+}: {
+  post: ScheduledPost;
+  isDragging: boolean;
+  isMenuOpen: boolean;
+  onDragStart: () => void;
+  onDragEnd: () => void;
+  onToggleMenu: () => void;
+  onCloseMenu: () => void;
+  onDelete: () => void;
+  onDuplicate: () => void;
+  onMarkPublished: () => void;
+}) {
+  const pillarTint =
+    PILLAR_TINT[post.pillar] ?? "bg-white/10 text-white/70 border-white/15";
+  const slotLabel = `${String(post.slot).padStart(2, "0")}:00`;
+
+  return (
+    <div
+      draggable
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      className={`group relative rounded-lg border ${pillarTint} p-2 text-left transition-all ${
+        isDragging ? "opacity-40" : ""
+      } ${post.status === "Published" ? "opacity-70" : ""}`}
+    >
+      <div className="flex items-start justify-between gap-1">
+        <div className="flex min-w-0 items-start gap-1">
+          <GripVertical className="h-3 w-3 shrink-0 text-white/30 mt-0.5" />
+          <div className="min-w-0">
+            <p className="truncate text-[11px] font-semibold text-white leading-tight">
+              {post.title}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-1">
+              <span className={`rounded px-1 py-0.5 text-[9px] font-semibold ${FORMAT_TINT[post.format]}`}>
+                {post.format}
+              </span>
+              <span className={`rounded px-1 py-0.5 text-[9px] ${STATUS_TINT[post.status]}`}>
+                {post.status}
+              </span>
+              <span className="text-[9px] tabular-nums text-white/60">{slotLabel}</span>
+              <span className="flex items-center gap-0.5 text-[9px] font-semibold text-emerald-300">
+                <TrendingUp className="h-2.5 w-2.5" />
+                {post.score}
+              </span>
+            </div>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleMenu();
+          }}
+          className="rounded p-0.5 text-white/50 hover:bg-white/10 hover:text-white/90"
+          aria-label="More"
+        >
+          <MoreVertical className="h-3 w-3" />
+        </button>
+      </div>
+
+      {isMenuOpen ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-10 cursor-default"
+            onClick={onCloseMenu}
+            aria-label="Close menu"
+          />
+          <div className="absolute right-1 top-6 z-20 w-40 overflow-hidden rounded-lg border border-white/10 bg-black/95 shadow-xl backdrop-blur">
+            <button
+              type="button"
+              onClick={onMarkPublished}
+              disabled={post.status === "Published"}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-white/90 hover:bg-white/10 disabled:opacity-40"
+            >
+              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" /> Mark Published
+            </button>
+            <button
+              type="button"
+              onClick={onDuplicate}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-white/90 hover:bg-white/10"
+            >
+              <Copy className="h-3.5 w-3.5" /> Duplicate
+            </button>
+            <button
+              type="button"
+              onClick={onDelete}
+              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-crimson hover:bg-crimson/10"
+            >
+              <Trash2 className="h-3.5 w-3.5" /> Delete
+            </button>
+          </div>
+        </>
+      ) : null}
+    </div>
+  );
+}
+
