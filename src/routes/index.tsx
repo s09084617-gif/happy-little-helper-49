@@ -445,7 +445,27 @@ function Index() {
               />
             )}
 
+            <CalendarPanel
+              posts={scheduledPosts}
+              isLoading={scheduled.isLoading}
+              isPlanning={autoPlan.isPending}
+              planError={
+                autoPlan.error instanceof Error ? autoPlan.error.message : null
+              }
+              onAutoPlan={() => autoPlan.mutate(undefined)}
+              onRegenerateWeek={() => autoPlan.mutate({ scopeWeekOnly: true })}
+              onMove={(id, scheduled_date, slot) =>
+                moveMut.mutate({ id, scheduled_date, slot })
+              }
+              onDelete={(id) => deleteMut.mutate(id)}
+              onDuplicate={(id) => dupMut.mutate(id)}
+              onMarkPublished={(id) => publishMut.mutate(id)}
+              onCreate={(v) => createMut.mutate(v)}
+            />
+
           </main>
+
+
 
           <aside className="w-full shrink-0 animate-fade-in xl:w-80 xl:pl-2">
             <div className="glass-card rounded-2xl p-6 lg:p-7">
