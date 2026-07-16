@@ -35,6 +35,59 @@ export type Database = {
         }
         Relationships: []
       }
+      scheduled_posts: {
+        Row: {
+          created_at: string
+          format: string
+          id: string
+          notes: string | null
+          pillar: string
+          scheduled_date: string
+          score: number
+          script_id: string | null
+          slot: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          format: string
+          id?: string
+          notes?: string | null
+          pillar: string
+          scheduled_date: string
+          score?: number
+          script_id?: string | null
+          slot?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          format?: string
+          id?: string
+          notes?: string | null
+          pillar?: string
+          scheduled_date?: string
+          score?: number
+          script_id?: string | null
+          slot?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_posts_script_id_fkey"
+            columns: ["script_id"]
+            isOneToOne: false
+            referencedRelation: "scripts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       scripts: {
         Row: {
           caption: string
