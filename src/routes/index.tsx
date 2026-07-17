@@ -1111,12 +1111,29 @@ function ScoutLastSync({ extra }: { extra: ScoutExtra }) {
     isError,
     isSuccess,
     errorMessage,
+    connectionStatus,
+    connectionMessage,
     onRefresh,
   } = extra;
 
-  return (
-    <div className="relative mt-5 border-t border-white/5 pt-4">
-      <div className="mb-3 flex items-center justify-between">
+  const badge = (() => {
+    if (isFetching && !connectionStatus) {
+      return { dot: "🟡", label: "Connecting", cls: "bg-amber-400/10 text-amber-300" };
+    }
+    switch (connectionStatus) {
+      case "connected":
+        return { dot: "🟢", label: "Connected", cls: "bg-emerald-400/10 text-emerald-300" };
+      case "connected_public":
+        return { dot: "🟢", label: "Connected (public)", cls: "bg-emerald-400/10 text-emerald-300" };
+      case "auth_failed":
+        return { dot: "🔴", label: "Authentication Failed", cls: "bg-crimson/10 text-crimson" };
+      case "dataset_not_found":
+        return { dot: "🟡", label: "Dataset Not Found", cls: "bg-amber-400/10 text-amber-300" };
+      default:
+        return { dot: "⚪", label: "Idle", cls: "bg-white/5 text-white/60" };
+    }
+  })();
+
         <div className="flex items-center gap-2 text-xs font-medium uppercase tracking-wider text-muted-foreground">
           <Clock className="h-3.5 w-3.5" />
           <span>Last Sync</span>
