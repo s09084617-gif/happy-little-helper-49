@@ -370,7 +370,11 @@ function Index() {
                               : scout.isError
                                 ? "Failed to sync"
                                 : null,
-                          onRefresh: () => scout.refetch(),
+                          connectionStatus: scout.isError
+                            ? "auth_failed"
+                            : scout.data?.connectionStatus ?? null,
+                          connectionMessage: scout.data?.connectionMessage ?? null,
+                          onRefresh: () => refreshAll(),
                         }
                       : undefined
                   }
