@@ -115,7 +115,7 @@ function Index() {
     const result = await scout.refetch();
     if (result.data && result.data.connectionStatus !== "auth_failed") {
       // Refresh Analytics + Calendar after a healthy Scout sync
-      qcTop.invalidateQueries({ queryKey: ["analytics"] });
+      analytics.reset();
       qcTop.invalidateQueries({ queryKey: ["scheduled_posts"] });
     }
   };
