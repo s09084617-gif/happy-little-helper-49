@@ -99,6 +99,7 @@ interface SummaryMetric {
 
 function Index() {
 
+  const qcTop = useQueryClient();
   const scout = useQuery({
     queryKey: ["scout"],
     queryFn: () => fetchScoutData(),
@@ -109,6 +110,15 @@ function Index() {
   const analytics = useMutation({
     mutationFn: () => analyzeScoutData(),
   });
+
+  const refreshAll = async () => {
+    const result = await scout.refetch();
+    if (result.data && result.data.connectionStatus !== "auth_failed") {
+      // Refresh Analytics + Calendar after a healthy Scout sync
+      qcTop.invalidateQueries({ queryKey: ["analytics"] });
+      qcTop.invalidateQueries({ queryKey: ["scheduled_posts"] });
+    }
+  };
 
   const queryClient = useQueryClient();
   const scripts = useQuery({
