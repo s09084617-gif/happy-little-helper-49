@@ -530,6 +530,8 @@ interface ScoutExtra {
   isError: boolean;
   isSuccess: boolean;
   errorMessage: string | null;
+  connectionStatus: import("@/lib/scout.functions").ScoutConnectionStatus | null;
+  connectionMessage: string | null;
   onRefresh: () => void;
 }
 
